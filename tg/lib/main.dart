@@ -1,5 +1,7 @@
+/* ***************
+    Imports
+**************** */
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,9 @@ import 'package:tg/widget/tab-bar_widget.dart';
 import 'dart:convert';
 
 
+/* 
+Login class to hold user credentials
+*/
 class Login {
   String username; // "VELOCITY",
   String password; // "JPY920",
@@ -31,6 +36,9 @@ class Login {
 
 }
 
+/* ***************
+  Main Function
+**************** */
 main() {
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
@@ -196,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueGrey,
+                            backgroundColor: Colors.red,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20))),
@@ -205,7 +213,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18))),
+                                fontSize: 18)
+                                )
+                              ),
                   ),
 
                 ],
@@ -245,20 +255,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
 
 class User {
-  String username; // "VELOCITY",
+  String username;     // "VELOCITY",
   String environment; // "JPY920",
-  String role;// "*ALL",
+  String role;       // "*ALL",
   String jasserver; // "http://c1y76088.ora.vtscloud.io:3001",
 
   User(this.username, this.environment, this.role, this.jasserver);
-  /*
-  User User(Map<String, dynamic> data){
-    this.username = data['username'];
-    this.environment = data['environment'];
-    this.role = data['role'];
-    this.jasserver = data['jassserver'];
-
-  }; */
+ 
 
   factory User.fromJson(dynamic json){
     return User(json['username'] as String, json['environment'] as String,
@@ -299,16 +302,6 @@ class Home extends StatelessWidget {
   }*/
 
 }
-/*
-Future main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  runApp(MyApp());
-} */
 
 class MyApp extends StatelessWidget {
 static const String title = 'Cycle Count';
