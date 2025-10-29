@@ -35,9 +35,9 @@ class ExpenseItem  extends StatelessWidget {
                 const Spacer(),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16),
+                    Icon(categoryIcons[expense.category] as IconData),
                     const SizedBox(width: 8),
-                    Text('${expense.date.day}/${expense.date.month}/${expense.date.year}'),
+                    Text(expense.formattedDate),
                   ],
                 ),
               ],

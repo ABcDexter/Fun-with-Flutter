@@ -1,6 +1,7 @@
 /* 
   Imports
 */
+import 'package:expense_tracker/new_expense.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/widgets/expenses_list/expenses_list.dart';
@@ -25,7 +26,23 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
   final List<Expense> _registeredExpenses = [
     Expense(title: 'Test Expense', amount: 19.99, date: DateTime.now(), category: Category.food),
     Expense(title: 'Test Expense 2', amount: 49.99, date: DateTime.now(), category: Category.cab),
+    Expense(title: 'Test Expense 3', amount: 99.99, date: DateTime.now(), category: Category.office),
+    Expense(title: 'Test Expense 4', amount: 199.99, date: DateTime.now(), category: Category.bill),
+    Expense(title: 'Test Expense 5', amount: 299.99, date: DateTime.now(), category: Category.home),
+    Expense(title: 'Test Expense 6', amount: 399.99, date: DateTime.now(), category: Category.other),
+    Expense(title: 'Test Expense 7', amount: 499.99, date: DateTime.now(), category: Category.Anubhav),
+    Expense(title: 'Test Expense 8', amount: 599.99, date: DateTime.now(), category: Category.Rachna),    
+    Expense(title: 'Test Expense 9', amount: 699.99, date: DateTime.now(), category: Category.Baby),
   ];
+
+  _openAddExpenseOverlay() {
+    // Function to open overlay for adding a new expense
+    showModalBottomSheet(
+      context: context, //automatically available in State class
+      builder: (ctx)  //ctx is the BuildContext of the bottom sheet
+        => const NewExpense(),
+    );
+  } 
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +51,14 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
         title: const Text('Expense Tracker'),
         centerTitle: true,
         backgroundColor: Colors.greenAccent,
+        actions: [
+          IconButton(
+            onPressed: _openAddExpenseOverlay, //{}
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
+
       body: Column(
         children: <Widget> [
           const Text('List of Expenses!'),
