@@ -50,7 +50,8 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
       appBar: AppBar(
         title: const Text('Expense Tracker'),
         centerTitle: true,
-        backgroundColor: Colors.greenAccent,
+        //backgroundColor: const Color.fromARGB(255, 187, 6, 111),
+        backgroundColor: const Color(0xFF3366FF),
         actions: [
           IconButton(
             onPressed: _openAddExpenseOverlay, //{}
