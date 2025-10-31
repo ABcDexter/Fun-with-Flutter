@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-//import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/models/expense.dart';
 
 /*
   NewExpense widget to add a new expense
@@ -28,23 +29,27 @@ class _NewExpense extends State<NewExpense> {
     final _titleController = TextEditingController();
     final _amountController = TextEditingController();
     final _dateController = TextEditingController();
+    DateTime? _selectedDate;
+    Category? _selectedCategory = Category.other;
 
-
-    void _presentDatePicker() {
+    void _presentDatePicker() async {
 
         final now = DateTime.now();
         final firstDate = DateTime(now.year - 1, now.month, now.day);
         final lastDate = DateTime(now.year + 1, now.month, now.day);
-        
-        showDatePicker(
+        final pickedDate = await showDatePicker(
             context: context,
             initialDate: now,
             firstDate: firstDate,
             lastDate: lastDate,
-        ).then((pickedDate) {
-            if (pickedDate != null) {
-                _dateController.text = DateFormat('dd-MM-yyyy').format(pickedDate);
-            }
+        );
+
+        if (pickedDate != null) {
+            _dateController.text = DateFormat('dd-MM-yyyy').format(pickedDate);
+        }
+
+        setState(() {
+            _selectedDate = pickedDate;
         });
     }
 
@@ -87,7 +92,6 @@ class _NewExpense extends State<NewExpense> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  const Text('Select Date'),
                                   const SizedBox(width: 16),
                                   Expanded(
                                       child: 
@@ -110,7 +114,31 @@ class _NewExpense extends State<NewExpense> {
 
                     const SizedBox(height: 16),
 
+                    DropdownButton(
+                            hint: const Text('Select Category'),
+                            items: Category.values
+                                .map((category) => DropdownMenuItem(
+                                    value: category,
+                                    child: Text(category.name.toUpperCase()),
+                                )).toList(),
+                            
+                            onChanged: (value) { 
+                              if (value == null)  {
+                                  return ;
+                                }
+                              setState(() {
+                                _selectedCategory = value;
+                              });
+                              print('AB DEBUG : Selected Category = $_selectedCategory');
+                            }
+                        ),
+
+                    const SizedBox(height: 32),
+
                     Row(children: [
+                        
+                        
+                        //CANCEL Button
                         ElevatedButton(
                             onPressed: () {
                                 // Handle cancel logic
@@ -124,6 +152,8 @@ class _NewExpense extends State<NewExpense> {
                                 // Handle save expense logic
                                 print('AB DEBUG : Expense Saved = ${_titleController.text}');
                                 print('AB DEBUG : Amount = ${_amountController.text}');
+                                print('AB DEBUG : Date = ${_selectedDate != null ? DateFormat('dd-MM-yyyy').format(_selectedDate!) : 'No Date Chosen'}');
+                                Navigator.pop(context); //closes the bottom sheet
                             },
                             child: const Text('Save Expense'),
                         ),
