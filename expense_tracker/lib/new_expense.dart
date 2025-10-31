@@ -2,12 +2,15 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/expenses.dart';
 
 /*
   NewExpense widget to add a new expense
 */
 class NewExpense extends StatefulWidget {
-    const NewExpense({super.key});
+    const NewExpense({super.key, required this.onAddExpense});
+
+    final Function(Expense) onAddExpense; //accepting function as parameter
 
     @override
     State<NewExpense> createState() {
@@ -16,15 +19,7 @@ class NewExpense extends StatefulWidget {
 }
 
 class _NewExpense extends State<NewExpense> {
-    /*
-    var _enteredTitle = '';
-
-    void _saveTitleInput (String inputValue){
-        //setState(() { UI need not to update, so no need to call setState
-            _enteredTitle = inputValue;
-        //});
     
-    }*/
 
     final _titleController = TextEditingController();
     final _amountController = TextEditingController();
@@ -51,6 +46,72 @@ class _NewExpense extends State<NewExpense> {
         setState(() {
             _selectedDate = pickedDate;
         });
+    }
+
+    showErrorDialogue(String message) {
+        showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+                title: const Text('Invalid Input', textAlign: TextAlign.center),
+                content: Text(message),
+                actions: [
+                    TextButton(
+                        onPressed: () {
+                            Navigator.of(ctx).pop();
+                        },
+                        child: const Text('Okay'),
+                    ),
+                ],
+            ),
+        );
+    }
+
+    bool _validateData(){
+      // validate the Title , Amount , Date and Category
+        if (_titleController.text.trim().isEmpty) {
+            showErrorDialogue('Please enter a title.');
+            return false;
+        }
+
+        if (_amountController.text.trim().isEmpty || double.tryParse(_amountController.text) == null || double.parse(_amountController.text) <= 0) {
+            showErrorDialogue('Please enter a valid amount.');
+            return false;
+        }
+
+        if (_selectedDate == null) {
+            showErrorDialogue('Please select a date.');
+            return false;
+        }
+
+        if (_selectedCategory == null) {
+            showErrorDialogue('Please select a category.');
+            return false;
+        }
+
+        return true;
+      }
+
+    void _saveExpense() {
+        // Logic to save the expense
+        if (!_validateData()) {
+            return; // Do not proceed if data is invalid
+        }
+
+        final newExpense = Expense(
+            title: _titleController.text,
+            amount: double.parse(_amountController.text),
+            date: _selectedDate!, //we're sure this won't be null
+            category: _selectedCategory!, //we're sure this won't be null
+        );
+
+        // Save the new expense 
+        _addExpense(newExpense);
+
+        // TODO : Add to drift Database
+    }
+
+    void _addExpense(Expense expense) {
+        widget.onAddExpense(expense); // Call the function passed from parent widget
     }
 
     @override
@@ -153,6 +214,12 @@ class _NewExpense extends State<NewExpense> {
                                 print('AB DEBUG : Expense Saved = ${_titleController.text}');
                                 print('AB DEBUG : Amount = ${_amountController.text}');
                                 print('AB DEBUG : Date = ${_selectedDate != null ? DateFormat('dd-MM-yyyy').format(_selectedDate!) : 'No Date Chosen'}');
+                                
+                                _validateData();
+                                // All data is valid, proceed to save the expense
+                                _saveExpense();
+
+                                
                                 Navigator.pop(context); //closes the bottom sheet
                             },
                             child: const Text('Save Expense'),
