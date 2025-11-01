@@ -23,7 +23,8 @@ class Expenses extends StatefulWidget {
 
 class _ExpensesState extends State<Expenses> { //State is a generic class so we need to specify the type of State it is managing
 
-  final List<Expense> _registeredExpenses = [
+  List<Expense> _registeredExpenses = [
+    // TODO Remove hardcoded expenses
     Expense(title: 'Test Expense', amount: 19.99, date: DateTime.now(), category: Category.food),
     Expense(title: 'Test Expense 2', amount: 49.99, date: DateTime.now(), category: Category.cab),
     Expense(title: 'Test Expense 3', amount: 99.99, date: DateTime.now(), category: Category.office),
@@ -39,10 +40,17 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
     // Function to open overlay for adding a new expense
     showModalBottomSheet(
       context: context, //automatically available in State class
-      builder: (ctx)  //ctx is the BuildContext of the bottom sheet
-        => const NewExpense(),
+      builder: (ctx) { //ctx is the BuildContext of the bottom sheet
+        return NewExpense(onAddExpense: _addExpense); //we're passing the function as parameter
+      }
     );
   } 
+
+  void _addExpense(Expense expense) {
+    setState(() {
+      _registeredExpenses.add(expense);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +58,8 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
       appBar: AppBar(
         title: const Text('Expense Tracker'),
         centerTitle: true,
-        backgroundColor: Colors.greenAccent,
+        //backgroundColor: const Color.fromARGB(255, 187, 6, 111),
+        backgroundColor: const Color(0xFF3366FF),
         actions: [
           IconButton(
             onPressed: _openAddExpenseOverlay, //{}
