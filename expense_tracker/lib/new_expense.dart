@@ -112,6 +112,9 @@ class _NewExpense extends State<NewExpense> {
 
     void _addExpense(Expense expense) {
         widget.onAddExpense(expense); // Call the function passed from parent widget
+    
+       // Navigator.pop(context); // Close the bottom sheet after adding the expense
+    
     }
 
     @override
@@ -125,7 +128,7 @@ class _NewExpense extends State<NewExpense> {
     @override
     Widget build(BuildContext context) {
         return Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 48, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
             child: Column(
                 children: [
                     TextField( // Title Input Field

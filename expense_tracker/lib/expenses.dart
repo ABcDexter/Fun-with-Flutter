@@ -39,6 +39,7 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
   _openAddExpenseOverlay() {
     // Function to open overlay for adding a new expense
     showModalBottomSheet(
+      isScrollControlled: true,
       context: context, //automatically available in State class
       builder: (ctx) { //ctx is the BuildContext of the bottom sheet
         return NewExpense(onAddExpense: _addExpense); //we're passing the function as parameter
@@ -49,6 +50,12 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
   void _addExpense(Expense expense) {
     setState(() {
       _registeredExpenses.add(expense);
+    });
+  }
+
+  void _removeExpense(Expense expense) {
+    setState(() {
+      _registeredExpenses.remove(expense);
     });
   }
 
@@ -72,7 +79,7 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
         children: <Widget> [
           const Text('List of Expenses!'),
           Expanded(
-            child: ExpensesList(expenses: _registeredExpenses),
+            child: ExpensesList(expenses: _registeredExpenses, onRemoveExpense: _removeExpense),
           ),
         ],
       ),
