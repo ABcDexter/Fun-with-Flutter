@@ -112,9 +112,7 @@ class _NewExpense extends State<NewExpense> {
 
     void _addExpense(Expense expense) {
         widget.onAddExpense(expense); // Call the function passed from parent widget
-    
-       // Navigator.pop(context); // Close the bottom sheet after adding the expense
-    
+        
     }
 
     @override
@@ -221,7 +219,6 @@ class _NewExpense extends State<NewExpense> {
                                 _validateData();
                                 // All data is valid, proceed to save the expense
                                 _saveExpense();
-
                                 
                                 Navigator.pop(context); //closes the bottom sheet
                             },
