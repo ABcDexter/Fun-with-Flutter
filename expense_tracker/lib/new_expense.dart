@@ -108,6 +108,7 @@ class _NewExpense extends State<NewExpense> {
         _addExpense(newExpense);
 
         // TODO : Add to drift Database
+        // You can use the drift package to insert the new expense into the database
     }
 
     void _addExpense(Expense expense) {
