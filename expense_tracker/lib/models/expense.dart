@@ -1,6 +1,7 @@
 /* 
   Imports
 */
+import 'package:expense_tracker/database/drift_database.dart' as db;
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
@@ -57,5 +58,4 @@ class Expense {
   String get formattedDate { //getters are computed properties which are dynamically derived based on Class' other properties
     return dateFormatter.format(date);
   }
-
 }

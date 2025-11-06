@@ -8,13 +8,13 @@ import 'package:expense_tracker/models/expense.dart' as model;
 
 part 'drift_database.g.dart';
 
+@DataClassName('DriftExpense')
 class Expenses extends Table {
   TextColumn get id => text()();
   TextColumn get title => text().withLength(min: 1, max: 50)();
   RealColumn get amount => real()();
-  DateTimeColumn get date => dateTime()();
+  DateTimeColumn get date => dateTime()();      
   IntColumn get category => intEnum<model.Category>()();
-
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -22,11 +22,18 @@ class Expenses extends Table {
 @DriftDatabase(tables: [Expenses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
-
   @override
   int get schemaVersion => 1;
 
-  Future<void> insertExpense(Expense expense) => into(expenses).insert(expense);
+  Future<void> insertExpense(model.Expense expense) {
+    return into(expenses).insert(ExpensesCompanion(
+      id: Value(expense.id),
+      title: Value(expense.title),
+      amount: Value(expense.amount),
+      date: Value(expense.date),
+      category: Value(expense.category),
+    ));
+  }
 }
 
 LazyDatabase _openConnection() {

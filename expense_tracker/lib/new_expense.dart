@@ -105,15 +105,7 @@ class _NewExpense extends State<NewExpense> {
             category: _selectedCategory!, //we're sure this won't be null
         );
 
-        final driftExpense = db.Expense(
-            id: newExpense.id,
-            title: newExpense.title,
-            amount: newExpense.amount,
-            date: newExpense.date,
-            category: newExpense.category);
-
-        db.database.insertExpense(driftExpense);
-
+        db.database.insertExpense(newExpense);
         // Save the new expense 
         _addExpense(newExpense);
 
