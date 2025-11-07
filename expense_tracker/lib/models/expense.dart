@@ -46,8 +46,9 @@ class Expense {
     required this.title,
     required this.amount,
     required this.date,
-    required this.category
-  }) : id = uuid.v4(); // initializer list to generate a new unique id
+    required this.category,
+    String? id,
+  }) : id = id ?? uuid.v4(); // initializer list to generate a new unique id
 
   final String id;
   final String title;

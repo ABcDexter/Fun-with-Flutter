@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:expense_tracker/models/expense.dart' as model;
+import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
 part 'drift_database.g.dart';
 
@@ -34,12 +35,30 @@ class AppDatabase extends _$AppDatabase {
       category: Value(expense.category),
     ));
   }
+
+  Future<List<model.Expense>> getAllExpenses() async {
+    final driftExpenses = await select(expenses).get();
+    return driftExpenses.map((driftExpense) {
+      return model.Expense(
+        id: driftExpense.id,
+        title: driftExpense.title,
+        amount: driftExpense.amount,
+        date: driftExpense.date,
+        category: driftExpense.category,
+      );
+    }).toList();
+  }
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'db.sqlite'));
+
+    if (Platform.isAndroid) {
+      await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
+    }
+
     return NativeDatabase.createInBackground(file);
   });
 }
