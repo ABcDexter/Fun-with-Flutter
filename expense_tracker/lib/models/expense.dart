@@ -1,6 +1,7 @@
 /* 
   Imports
 */
+import 'package:expense_tracker/database/drift_database.dart' as db;
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
@@ -45,8 +46,9 @@ class Expense {
     required this.title,
     required this.amount,
     required this.date,
-    required this.category
-  }) : id = uuid.v4(); // initializer list to generate a new unique id
+    required this.category,
+    String? id,
+  }) : id = id ?? uuid.v4(); // initializer list to generate a new unique id
 
   final String id;
   final String title;
@@ -57,5 +59,4 @@ class Expense {
   String get formattedDate { //getters are computed properties which are dynamically derived based on Class' other properties
     return dateFormatter.format(date);
   }
-
 }

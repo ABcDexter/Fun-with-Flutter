@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/expenses.dart';
+import 'package:expense_tracker/database/drift_database.dart' as db;
 
 /*
   NewExpense widget to add a new expense
@@ -104,14 +105,15 @@ class _NewExpense extends State<NewExpense> {
             category: _selectedCategory!, //we're sure this won't be null
         );
 
+        db.database.insertExpense(newExpense);
         // Save the new expense 
         _addExpense(newExpense);
 
-        // TODO : Add to drift Database
     }
 
     void _addExpense(Expense expense) {
         widget.onAddExpense(expense); // Call the function passed from parent widget
+        
     }
 
     @override
@@ -125,7 +127,7 @@ class _NewExpense extends State<NewExpense> {
     @override
     Widget build(BuildContext context) {
         return Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 48, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
             child: Column(
                 children: [
                     TextField( // Title Input Field
@@ -218,7 +220,6 @@ class _NewExpense extends State<NewExpense> {
                                 _validateData();
                                 // All data is valid, proceed to save the expense
                                 _saveExpense();
-
                                 
                                 Navigator.pop(context); //closes the bottom sheet
                             },
