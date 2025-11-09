@@ -40,6 +40,8 @@ dependencies:
   drift_dev: ^2.29.0
   path_provider: ^2.0.15
   build_runner: ^2.10.1
+  drift_flutter: ^0.2.7
+  sqlite3_flutter_libs: ^0.5.24
   
 
 dev_dependencies:

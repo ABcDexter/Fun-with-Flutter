@@ -50,7 +50,9 @@ class _ExpensesState extends State<Expenses> { //State is a generic class so we 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Expense>>(
-      future: db.database.getAllExpenses(),
+      // Fetch expenses from the database
+      // in case the data is not yet available, show a loading spinner
+      future: db.database.getAllExpenses(), 
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
