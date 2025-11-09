@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/expenses.dart';
+import 'package:expense_tracker/database/drift_database.dart' as db;
 
 /*
   NewExpense widget to add a new expense
@@ -104,10 +105,10 @@ class _NewExpense extends State<NewExpense> {
             category: _selectedCategory!, //we're sure this won't be null
         );
 
+        db.database.insertExpense(newExpense);
         // Save the new expense 
         _addExpense(newExpense);
 
-        // TODO : Add to drift Database
     }
 
     void _addExpense(Expense expense) {
