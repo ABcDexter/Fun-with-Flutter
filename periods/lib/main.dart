@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import 'pages/login_page.dart';
+import 'pages/homepage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -59,29 +60,5 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return HomePage(onLogout: _logout);
     }
     return LoginPage(onLogin: _login);
-  }
-}
-
-class HomePage extends StatelessWidget {
-  final VoidCallback onLogout;
-
-  const HomePage({super.key, required this.onLogout});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Periods Tracker'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: onLogout,
-          ),
-        ],
-      ),
-      body: const Center(
-        child: Text('Welcome to Periods Tracker!'),
-      ),
-    );
   }
 }
