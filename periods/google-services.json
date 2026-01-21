@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "924553088384",
+    "project_id": "periods-flutter-app",
+    "storage_bucket": "periods-flutter-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:924553088384:android:0d769445953ef34438c565",
+        "android_client_info": {
+          "package_name": "com.abalodhi.periods"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0w_7tO183j8N-vn9WZz-UQQQ87lqHEaE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
