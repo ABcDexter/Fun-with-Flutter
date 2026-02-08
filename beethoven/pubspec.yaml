@@ -1,0 +1,47 @@
+name: beethoven
+description: "Indian Sign Language (ISL) to English Voice Conversion Flutter App - ML-powered real-time translation"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.19.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core ML/Camera dependencies
+  camera: ^0.10.0
+  tflite_flutter: ^0.10.0
+
+  # Audio & TTS
+  flutter_tts: ^4.0.0
+
+  # State Management
+  riverpod: ^2.0.0
+  flutter_riverpod: ^2.0.0
+
+  # UI & Utilities
+  freezed_annotation: ^2.0.0
+  json_annotation: ^4.0.0
+
+  # Image processing
+  image: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+  build_runner: ^2.0.0
+  freezed: ^2.0.0
+  json_serializable: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/models/
+    - assets/data/
+    - assets/isl_vocabulary/
