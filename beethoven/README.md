@@ -16,7 +16,7 @@ To create an accessible, real-time translation system that bridges the communica
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
-│              Video Processing Pipeline                       │
+│              Video Processing Pipeline                      │
 ├─────────────────────────────────────────────────────────────┤
 │  Camera Input → Frame Preprocessing → ML Inference          │
 └─────────────────────────────────────────────────────────────┘
@@ -284,7 +284,7 @@ Text-to-Speech Generation
 
 ## 🎓 Academic Context
 
-**Author Profile**: PhD in Machine Learning, MIT  
+**Author Profile**: Deep interest in Machine Learning  
 **Expertise**: 
 - Deep Learning & Computer Vision
 - Real-time Inference Systems
@@ -325,7 +325,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 ## 📞 Support
 
 For issues, questions, or suggestions:
-- 📧 Email: your-email@example.com
+- 📧 Email: anubhav.balodhi@gmail.com
 - 🐙 GitHub Issues: [Create an issue](https://github.com/ABcDexter/Fun-with-Flutter/issues)
 - 💬 Discussions: [Start a discussion](https://github.com/ABcDexter/Fun-with-Flutter/discussions)
 
