@@ -1,12 +1,14 @@
-"""
-Requirements for Beethoven ML Training
-Python 3.8+
-"""
+#
+# Requirements for Beethoven ML Training
+# Python 3.10–3.11 recommended
+
 
 # Core ML/Deep Learning
-tensorflow>=2.12.0
-tensorflow-io>=0.32.0
-keras>=2.12.0
+tensorflow>=2.15.0; platform_system != "Darwin"
+tensorflow-macos>=2.15.0; platform_system == "Darwin"
+tensorflow-metal>=1.1.0; platform_system == "Darwin"
+tensorflow-io>=0.35.0
+keras>=2.15.0
 numpy>=1.24.0
 opencv-python>=4.8.0
 
@@ -37,7 +39,7 @@ onnx>=1.15.0
 onnx-tf>=1.10.0
 
 # Mobile TensorFlow Lite
-tensorflow-lite>=0.0.1
+# (Use tflite in Flutter; no Python package needed here)
 
 # Optional: For Google Cloud TTS testing
 google-cloud-texttospeech>=2.14.0
