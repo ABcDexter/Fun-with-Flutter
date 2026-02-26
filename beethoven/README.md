@@ -125,6 +125,7 @@ beethoven/
 cd scripts
 python3 download_dataset.py
 ```
+Downloads to `assets/data/islar` by default. Use `--output_dir` to change it.
 
 #### Step 2: Train Model
 ```bash

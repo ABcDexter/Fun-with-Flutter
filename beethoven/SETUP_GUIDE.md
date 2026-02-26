@@ -82,6 +82,8 @@ mkdir -p ../assets/data
 python3 download_dataset.py
 ```
 
+Downloads to `assets/data/islar` by default. Use `--output_dir` to change it.
+
 ### 6. Train ML Model
 
 ```bash
