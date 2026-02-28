@@ -48,3 +48,6 @@ app.*.map.json
 .venv/
 venv/
 .python-version
+
+# Large model artifacts
+scripts/best_model_3dcnn.h5

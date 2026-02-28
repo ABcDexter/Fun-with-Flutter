@@ -1,0 +1,83 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "islar",
+  "dataset_size": 80152673,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/akshaybahadur21/ISLAR@1cf66ba9bc097039c43dec8559a9a3f3331a1157/data/train-00000-of-00001.parquet": {
+      "num_bytes": 77981568,
+      "checksum": null
+    }
+  },
+  "download_size": 77981568,
+  "features": {
+    "image": {
+      "_type": "Image"
+    },
+    "label": {
+      "names": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "7",
+        "8",
+        "9",
+        "a",
+        "b",
+        "c",
+        "confused",
+        "d",
+        "e",
+        "f",
+        "g",
+        "ganesh",
+        "hi",
+        "k",
+        "l",
+        "like",
+        "m",
+        "man",
+        "n",
+        "p",
+        "q",
+        "r",
+        "s",
+        "scared",
+        "study",
+        "t",
+        "u",
+        "understand",
+        "v",
+        "w",
+        "woman",
+        "work",
+        "x",
+        "y",
+        "z"
+      ],
+      "_type": "ClassLabel"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 158134241,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 80152673,
+      "num_examples": 28600,
+      "dataset_name": "islar"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
