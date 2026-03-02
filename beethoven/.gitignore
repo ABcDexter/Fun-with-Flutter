@@ -54,6 +54,6 @@ scripts/best_model_3dcnn.h5
 *.tflite
 
 #add variables.data-00000-of-00001
-variables.data-00000-of-00001
+saved_model_3dcnn/variables/variables.data-00000-of-00001
 saved_model_3dcnn/
 assets/models/*.tflite
