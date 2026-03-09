@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart' as tflite;
+import '../config/constants.dart';
 
 class ISLMLService {
   late tflite.Interpreter _interpreter;
@@ -55,6 +56,27 @@ class ISLMLService {
       final output = List<double>.filled(100, 0); // 100 classes for ISL signs
       _interpreter.run(input, output);
       return output;
+    } catch (e) {
+      print('Error running inference: $e');
+      rethrow;
+    }
+  }
+
+  /// Run inference on preprocessed sequence for 3D CNN
+  Future<List<double>> runInference3dcnn(
+    List<List<List<List<List<num>>>>> input,
+  ) async {
+    if (!_isInitialized) {
+      throw Exception('Model not initialized');
+    }
+
+    try {
+      final output = List.generate(
+        1,
+        (_) => List<double>.filled(MLModelConstants.numberOfClasses, 0),
+      );
+      _interpreter.run(input, output);
+      return output.first;
     } catch (e) {
       print('Error running inference: $e');
       rethrow;

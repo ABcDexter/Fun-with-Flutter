@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
+import 'package:image/image.dart' as img;
+import '../../config/constants.dart';
+import '../../config/providers.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -178,18 +181,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class CameraScreen extends StatefulWidget {
+class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
 
   @override
-  State<CameraScreen> createState() => _CameraScreenState();
+  ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> {
+class _CameraScreenState extends ConsumerState<CameraScreen> {
   late CameraController _controller;
   bool _isInitialized = false;
   String _recognizedText = '';
   double _confidence = 0.0;
+  bool _isProcessing = false;
+  int _lastProcessedMs = 0;
+  final List<List<List<List<num>>>> _frameBuffer = [];
 
   @override
   void initState() {
@@ -199,6 +205,11 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _initializeCamera() async {
     try {
+      final mlService = ref.read(mlServiceProvider);
+      if (!mlService.isInitialized) {
+        await mlService.loadModel(MLModelConstants.modelPath);
+      }
+
       final cameras = await availableCameras();
       final frontCamera = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
@@ -215,9 +226,62 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() => _isInitialized = true);
 
       // Start image stream for real-time processing
-      await _controller.startImageStream((image) {
-        // Process frames here
-        // This is where ML inference would happen
+      await _controller.startImageStream((image) async {
+        if (_isProcessing) {
+          return;
+        }
+
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        if (nowMs - _lastProcessedMs < CameraConstants.processingInterval) {
+          return;
+        }
+        _lastProcessedMs = nowMs;
+
+        _isProcessing = true;
+        try {
+          final frame = _preprocessCameraImage(image);
+          _frameBuffer.add(frame);
+          if (_frameBuffer.length < 30) {
+            return;
+          }
+          if (_frameBuffer.length > 30) {
+            _frameBuffer.removeAt(0);
+          }
+
+          final input = [_frameBuffer.toList()];
+          final predictions = await mlService.runInference3dcnn(input);
+          int maxIndex = 0;
+          double maxValue = predictions.first;
+          for (int i = 1; i < predictions.length; i++) {
+            if (predictions[i] > maxValue) {
+              maxValue = predictions[i];
+              maxIndex = i;
+            }
+          }
+
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _confidence = maxValue;
+            if (_confidence >= MLModelConstants.confidenceThreshold) {
+              _recognizedText = 'Class $maxIndex';
+            } else {
+              _recognizedText = '...';
+            }
+          });
+        } catch (e) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _recognizedText = 'Error';
+            _confidence = 0.0;
+          });
+        } finally {
+          _isProcessing = false;
+        }
       });
     } catch (e) {
       print('Error initializing camera: $e');
@@ -233,6 +297,66 @@ class _CameraScreenState extends State<CameraScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  List<List<List<num>>> _preprocessCameraImage(CameraImage image) {
+    final converted = _convertYUV420(image);
+    final resized = img.copyResize(
+      converted,
+      width: MLModelConstants.inputWidth,
+      height: MLModelConstants.inputHeight,
+    );
+
+    return List.generate(
+      resized.height,
+      (y) => List.generate(
+        resized.width,
+        (x) {
+          final pixel = resized.getPixel(x, y);
+          final r = img.getRed(pixel) / 255.0;
+          final g = img.getGreen(pixel) / 255.0;
+          final b = img.getBlue(pixel) / 255.0;
+          return [r, g, b];
+        },
+      ),
+    );
+  }
+
+  img.Image _convertYUV420(CameraImage image) {
+    final width = image.width;
+    final height = image.height;
+    final uvRowStride = image.planes[1].bytesPerRow;
+    final uvPixelStride = image.planes[1].bytesPerPixel ?? 1;
+    final img.Image rgbImage = img.Image(width: width, height: height);
+
+    for (int y = 0; y < height; y++) {
+      final uvRow = uvRowStride * (y >> 1);
+      final yRow = image.planes[0].bytesPerRow * y;
+      for (int x = 0; x < width; x++) {
+        final uvIndex = uvRow + (x >> 1) * uvPixelStride;
+        final yIndex = yRow + x;
+
+        final int yValue = image.planes[0].bytes[yIndex];
+        final int uValue = image.planes[1].bytes[uvIndex];
+        final int vValue = image.planes[2].bytes[uvIndex];
+
+        final double yDouble = yValue.toDouble();
+        final double uDouble = uValue.toDouble() - 128.0;
+        final double vDouble = vValue.toDouble() - 128.0;
+
+        int r = (yDouble + 1.402 * vDouble).round();
+        int g = (yDouble - 0.344136 * uDouble - 0.714136 * vDouble).round();
+        int b = (yDouble + 1.772 * uDouble).round();
+
+        r = r.clamp(0, 255);
+        g = g.clamp(0, 255);
+        b = b.clamp(0, 255);
+
+        rgbImage.setPixelRgb(x, y, r, g, b);
+      }
+    }
+
+    return rgbImage;
   }
 
   @override
