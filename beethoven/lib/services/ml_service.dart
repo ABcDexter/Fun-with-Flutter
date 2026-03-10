@@ -14,7 +14,7 @@ class ISLMLService {
       // Load the model from assets
       final buffer = await rootBundle.load(modelPath);
       _interpreter = await tflite.Interpreter.fromBuffer(
-        buffer.buffer.asUint8List()
+        buffer.buffer.asUint8List(),
       );
       _isInitialized = true;
       print('Model loaded successfully');
