@@ -313,9 +313,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         resized.width,
         (x) {
           final pixel = resized.getPixel(x, y);
-          final r = img.getRed(pixel) / 255.0;
-          final g = img.getGreen(pixel) / 255.0;
-          final b = img.getBlue(pixel) / 255.0;
+          // don't use img.getRed/Green/Blue as it may be in ARGB format, use bitwise operations instead
+          final r = pixel.r / 255.0;
+          final g = pixel.g / 255.0;
+          final b = pixel.b / 255.0;
           return [r, g, b];
         },
       ),
