@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/ui/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const ProviderScope(
       child: BeethovenApp(),
@@ -11,7 +12,7 @@ void main() {
 }
 
 class BeethovenApp extends StatelessWidget {
-  const BeethovenApp({Key? key}) : super(key: key);
+  const BeethovenApp({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,7 @@
 /// ML Model Configuration
 class MLModelConstants {
   static const String modelPath = 'assets/models/isl_recognition_model.tflite';
+  static const String webModelPath = 'models/isl_tfjs/model.json';
   static const int inputWidth = 224;
   static const int inputHeight = 224;
   static const int numberOfClasses = 100;

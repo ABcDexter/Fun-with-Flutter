@@ -1,12 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import '../../config/constants.dart';
 import '../../config/providers.dart';
+import 'camera_screen_web.dart' if (dart.library.io) 'camera_screen_stub.dart' as camera_impl;
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -58,7 +60,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CameraScreen(),
+                        builder: (context) => kIsWeb
+                            ? const camera_impl.WebCameraScreen()
+                            : const CameraScreen(),
                       ),
                     );
                   },
@@ -182,15 +186,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class CameraScreen extends ConsumerStatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  const CameraScreen({super.key});
 
   @override
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
 class _CameraScreenState extends ConsumerState<CameraScreen> {
-  late CameraController _controller;
+  CameraController? _controller;
   bool _isInitialized = false;
+  bool _isDisposed = false;
   String _recognizedText = '';
   double _confidence = 0.0;
   bool _isProcessing = false;
@@ -211,22 +216,33 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       }
 
       final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        throw Exception('No cameras available on this device');
+      }
+
       final frontCamera = cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
 
-      _controller = CameraController(
+      final controller = CameraController(
         frontCamera,
         ResolutionPreset.high,
         enableAudio: false,
       );
 
-      await _controller.initialize();
-      setState(() => _isInitialized = true);
+      await controller.initialize();
+
+      if (_isDisposed) {
+        await controller.dispose();
+        return;
+      }
+
+      _controller = controller;
+      if (mounted) setState(() => _isInitialized = true);
 
       // Start image stream for real-time processing
-      await _controller.startImageStream((image) async {
+      await _controller!.startImageStream((image) async {
         if (_isProcessing) {
           return;
         }
@@ -295,7 +311,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _isDisposed = true;
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -370,7 +387,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           ? Stack(
               children: [
                 // Camera Preview
-                CameraPreview(_controller),
+                CameraPreview(_controller!),
 
                 // Overlay with recognized text
                 Positioned(
