@@ -1,9 +1,12 @@
 // Web-only camera screen — bypasses camera_web entirely
 // Uses browser's getUserMedia API directly via dart:js_interop
+import 'dart:async';
+import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
@@ -21,49 +24,7 @@ class WebCameraScreen extends ConsumerStatefulWidget {
 }
 
 class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
-  static const List<String> _classLabels = [
-    '0',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '7',
-    '8',
-    '9',
-    'a',
-    'b',
-    'c',
-    'confused',
-    'd',
-    'e',
-    'f',
-    'g',
-    'ganesh',
-    'hi',
-    'k',
-    'l',
-    'like',
-    'm',
-    'man',
-    'n',
-    'p',
-    'q',
-    'r',
-    's',
-    'scared',
-    'study',
-    't',
-    'u',
-    'understand',
-    'v',
-    'w',
-    'woman',
-    'work',
-    'x',
-    'y',
-    'z',
-  ];
+  late List<String> _classLabels = [];
 
   static int _viewCounter = 0;
   late final String _viewId;
@@ -76,7 +37,6 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   String? _errorMessage;
   bool _isProcessing = false;
   int _processedFrameCount = 0;
-  final List<List<List<List<num>>>> _frameBuffer = [];
 
   web.HTMLVideoElement? _videoElement;
   web.MediaStream? _mediaStream;
@@ -84,11 +44,47 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   web.HTMLCanvasElement? _canvas;
   int? _inferenceLoopId;
 
+  Future<void> _loadLabels() async {
+    try {
+      // For web, load label_map.json via HTTP from the web/models folder
+      final response = await web.window.fetch('models/isl_tfjs/label_map.json'.toJS).toDart;
+      if (!response.ok) {
+        throw Exception('Failed to fetch label_map.json: ${response.status}');
+      }
+      final jsonStr = await response.text().toDart;
+      final data = jsonDecode(jsonStr.toString()) as Map<String, dynamic>;
+      final idToLabel = data['id_to_label'] as Map<String, dynamic>;
+      final numClasses = data['num_classes'] as int? ?? idToLabel.length;
+      
+      // Build ordered list from id_to_label map by index
+      final labels = <String>[];
+      for (int i = 0; i < numClasses; i++) {
+        final label = idToLabel[i.toString()];
+        labels.add(label is String ? label : 'unknown_$i');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _classLabels = labels;
+        });
+      }
+      _log('loadLabels', 'Loaded ${labels.length} classes: ${labels.take(10).join(", ")}...');
+    } catch (e, st) {
+      _logError('loadLabels', e, st);
+      if (mounted) {
+        setState(() {
+          _classLabels = [];
+        });
+      }
+    }
+  }
+
   String _classNameForIndex(int index) {
+
     if (index >= 0 && index < _classLabels.length) {
       return _classLabels[index];
     }
-    return 'unknown_$index';
+    return 'unknown_$index'; // Fallback if index is out of bounds
   }
 
   void _log(String stage, [String? message]) {
@@ -192,19 +188,10 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         return;
       }
 
-      _frameBuffer.add(frame);
-      if (_frameBuffer.length < 30) {
-        _isProcessing = false;
-        return;
-      }
-      if (_frameBuffer.length > 30) {
-        _frameBuffer.removeAt(0);
-      }
-
-      // Run inference
+      // Run inference on single frame (2D model, not 3D CNN)
       final mlService = ref.read(mlServiceProvider);
-      final input = [_frameBuffer.toList()];
-      final predictions = await mlService.runInference3dcnn(input);
+      final input = [frame];
+      final predictions = await mlService.runInference(input);
 
       // Find max prediction
       int maxIndex = 0;
@@ -223,6 +210,19 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
 
       setState(() {
         _confidence = maxValue;
+        
+        // Diagnostic: log label loading status
+        if (_processedFrameCount == 0 || _processedFrameCount % 100 == 0) {
+          _log(
+            'inference:diagnostic',
+            'Labels loaded: ${_classLabels.length}, predictions length: ${predictions.length}, maxIndex: $maxIndex, label: ${_classNameForIndex(maxIndex)}',
+          );
+        }
+        
+        _log(
+          'inference:prediction',
+          'frames=$_processedFrameCount class=${_classNameForIndex(maxIndex)}($maxIndex) confidence=${_confidence.toStringAsFixed(4)}',
+        );
         if (_confidence >= MLModelConstants.confidenceThreshold) {
           _recognizedText = _classNameForIndex(maxIndex);
         } else {
@@ -234,7 +234,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       if (_processedFrameCount % 30 == 0) {
         _log(
           'inference:result',
-          'frames=$_processedFrameCount clqass=${_classNameForIndex(maxIndex)}($maxIndex) confidence=${_confidence.toStringAsFixed(4)}',
+          'frames=$_processedFrameCount class=${_classNameForIndex(maxIndex)}($maxIndex) confidence=${_confidence.toStringAsFixed(4)}',
         );
       }
     } catch (e, st) {
@@ -255,6 +255,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
     super.initState();
     _viewId = 'beethoven-webcam-${_viewCounter++}';
     _log('initState', 'viewId=$_viewId');
+    _loadLabels();
     _registerViewAndStart();
   }
 

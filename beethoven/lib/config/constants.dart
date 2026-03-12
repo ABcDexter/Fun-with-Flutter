@@ -5,7 +5,7 @@ class MLModelConstants {
   static const int inputWidth = 224;
   static const int inputHeight = 224;
   static const int numberOfClasses = 100;
-  static const double confidenceThreshold = 0.7;
+  static const double confidenceThreshold = 0.4;
   static const int batchSize = 1;
 }
 
