@@ -11,6 +11,7 @@ tensorflow-io>=0.35.0
 keras>=2.15.0
 numpy>=1.24.0
 opencv-python>=4.8.0
+Pillow>=10.0.0
 
 # MediaPipe for Pose Detection
 mediapipe>=0.10.0
@@ -37,6 +38,7 @@ python-dotenv>=1.0.0
 # Model Conversion
 onnx>=1.15.0
 onnx-tf>=1.10.0
+tensorflowjs>=4.22.0
 
 # Mobile TensorFlow Lite
 # (Use tflite in Flutter; no Python package needed here)
