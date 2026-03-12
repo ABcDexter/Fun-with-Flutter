@@ -1,263 +1,258 @@
-# Beethoven - Indian Sign Language to English Voice Converter
+# Beethoven
 
-An advanced Flutter application that uses machine learning to convert live Indian Sign Language (ISL) video from the camera into English voice. This is a research-grade ML-powered application built by an ML engineer with PhD credentials.
+Indian Sign Language to text and speech using Flutter plus TensorFlow.
 
-## 🎯 Project Vision
+## Overview
 
-To create an accessible, real-time translation system that bridges the communication gap between sign language users and English speakers through intelligent video analysis and natural voice synthesis.
+`Beethoven` currently runs a web camera pipeline that:
 
-## 🏗️ Architecture Overview
+- captures live frames in Flutter Web
+- resizes frames to `224x224`
+- normalizes RGB values to `[0, 1]`
+- sends a single frame to a TensorFlow.js image classifier
+- maps the top prediction through `label_map.json`
+- shows the predicted label and confidence in the UI
 
+The current web flow uses a **single-frame 2D classifier**, not the older 30-frame 3D-CNN path.
+
+## Current Status
+
+### Web inference
+
+- **Runtime model:** `web/models/isl_tfjs/model.json`
+- **Runtime labels:** `web/models/isl_tfjs/label_map.json`
+- **Input shape:** `[batch, 224, 224, 3]`
+- **Preprocessing:** RGB float32 in `[0, 1]`
+- **Threshold:** `0.4` in `lib/config/constants.dart`
+- **Inference screen:** `lib/features/ui/camera_screen_web.dart`
+
+### Speech output
+
+- **Current implementation:** `flutter_tts` via `lib/services/tts_service.dart`
+- **Current locale:** `en-IN`
+- **Planned provider:** `Sarvam AI Text-to-Speech`
+
+`Sarvam` is not wired into the app yet. The codebase still uses `flutter_tts` today.
+
+## Why accuracy can be low right now
+
+If a sign like `1` is predicted as `l`, the most likely reasons are:
+
+- **Visual similarity:** `1` and `l` are extremely close in static hand shape, especially in a single frame.
+- **Single-frame model:** the current web model does not use motion or temporal context.
+- **Domain shift:** the training dataset and your webcam feed likely differ in lighting, background, framing, hand distance, and camera angle.
+- **No hand crop:** the app currently sends the full frame, not a cropped hand region, so the model sees a lot of irrelevant background.
+- **Quick training run:** a short run like `5` epochs on `5000` samples is useful for smoke validation, but often not enough for robust webcam accuracy.
+- **Class balance / label quality:** some classes may have fewer or noisier examples than others.
+- **Hand orientation mismatch:** left-hand vs right-hand usage, mirrored camera views, and rotation can all reduce accuracy.
+- **Threshold is not the root cause:** lowering threshold changes whether you show a prediction, but does not make the prediction more correct.
+
+## Recommended next improvements
+
+To improve real-world accuracy, prioritize these changes:
+
+1. **Train longer on more data**
+    - use the full dataset or a much larger subset
+    - increase epochs
+    - monitor validation accuracy and confusion between similar classes
+
+2. **Add hand detection or cropping**
+    - crop around the hand before inference
+    - reduce background noise
+
+3. **Use stronger augmentation**
+    - brightness, contrast, zoom, translation, mild rotation
+    - horizontal flip only if it is valid for your label semantics
+
+4. **Check label confusion pairs**
+    - especially `1` vs `l`, and other visually similar signs
+    - inspect a confusion matrix after training
+
+5. **Consider temporal modeling later**
+    - for dynamic signs, move back to a temporal model only after the image pipeline is stable
+
+## Project structure
+
+```text
+beethoven/
+├── lib/
+│   ├── config/
+│   │   └── constants.dart
+│   ├── features/ui/
+│   │   ├── camera_screen_web.dart
+│   │   └── home_screen.dart
+│   ├── services/
+│   │   ├── ml_service_mobile.dart
+│   │   ├── ml_service_web.dart
+│   │   └── tts_service.dart
+│   └── main.dart
+├── scripts/
+│   ├── train_isl_classifier.py
+│   ├── smoke_train_isl_classifier.py
+│   └── requirements.txt
+├── saved_model_islar/
+├── web/
+│   ├── isl_tfjs.js
+│   └── models/isl_tfjs/
+├── assets/
+└── pubspec.yaml
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Flutter Frontend                         │
-├─────────────────────────────────────────────────────────────┤
-│  Home Screen → Camera Screen → Recognition Display          │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│              Video Processing Pipeline                      │
-├─────────────────────────────────────────────────────────────┤
-│  Camera Input → Frame Preprocessing → ML Inference          │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│           TensorFlow Lite Model Execution                   │
-├─────────────────────────────────────────────────────────────┤
-│  MediaPipe Pose Detection → LSTM/3D-CNN → Sign Classification
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│         Text-to-Speech with Indian Accent                   │
-├─────────────────────────────────────────────────────────────┤
-│  Google Cloud TTS API / Flutter TTS → Audio Output          │
-└─────────────────────────────────────────────────────────────┘
-```
 
-## 🚀 Quick Start
+## Quick start
 
-### Prerequisites
+### Flutter app
 
-- **Flutter**: >= 3.0.0
-- **Dart**: >= 3.0.0
-- **Python**: >= 3.8 (for model training)
-- **TensorFlow**: >= 2.10
-- **macOS/iOS/Android** device for testing
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/ABcDexter/Fun-with-Flutter.git
-cd Fun-with-Flutter/beethoven
-```
-
-2. **Install Flutter dependencies**
-```bash
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
 flutter pub get
+flutter run -d chrome
 ```
 
-3. **Set up Python environment (for model training)**
-```bash
-python3 -m venv venv
-source venv/bin/activate
+### Python environment
+
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r scripts/requirements.txt
 ```
 
-4. **Run the app**
-```bash
-flutter run
+## Training workflow
+
+### Smoke check
+
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven/scripts
+python smoke_train_isl_classifier.py
 ```
 
-## 📋 Project Structure
+This only verifies the model builds and runs a forward pass.
 
-```
-beethoven/
-├── lib/
-│   ├── main.dart                      # App entry point
-│   ├── config/
-│   │   ├── constants.dart             # ML & app constants
-│   │   └── providers.dart             # Riverpod providers
-│   ├── features/
-│   │   ├── camera/                    # Camera functionality
-│   │   │   └── camera_screen.dart
-│   │   ├── ml/                        # ML inference
-│   │   │   └── isl_interpreter.dart
-│   │   ├── recognition/               # Sign recognition
-│   │   │   └── sign_recognizer.dart
-│   │   ├── tts/                       # Text-to-speech
-│   │   │   └── speech_service.dart
-│   │   └── ui/                        # UI screens
-│   │       └── home_screen.dart
-│   ├── models/                        # Data models
-│   │   └── recognition_models.dart
-│   ├── services/                      # Core services
-│   │   ├── camera_service.dart
-│   │   ├── ml_service.dart
-│   │   └── tts_service.dart
-│   └── utils/                         # Utilities
-│       └── extensions.dart
-├── scripts/
-│   ├── train_model.py                 # Model training
-│   ├── vocabulary.py                  # ISL vocabulary
-│   ├── recognition_engine.py          # Recognition logic
-│   └── requirements.txt
-├── assets/
-│   ├── models/
-│   │   └── isl_recognition_model.tflite
-│   ├── data/
-│   └── isl_vocabulary/
-├── pubspec.yaml                       # Flutter dependencies
-└── PROJECT_PLAN.md                    # Detailed project plan
+### Train the image classifier
+
+From the repository root:
+
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
+source .venv/bin/activate
+python scripts/train_isl_classifier.py \
+  --epochs 12 \
+  --batch_size 32 \
+  --max_samples 0 \
+  --export_tfjs
 ```
 
-## 🤖 Machine Learning Pipeline
+### Quick experimental run
 
-### Dataset
-- **Source**: [ISLAR - Hugging Face](https://huggingface.co/datasets/akshaybahadur21/ISLAR)
-- **Size**: 10,000+ ISL gesture videos
-- **Classes**: 100 common ISL signs
-
-### Model Training
-
-#### Step 1: Download Dataset
-```bash
-cd scripts
-python3 download_dataset.py
-```
-Downloads to `assets/data/islar` by default. Use `--output_dir` to change it.
-
-#### Step 2: Train Model
-```bash
-python3 train_model.py \
-  --model_type lstm_mediapipe \
-  --vocabulary_size 100 \
-  --sequence_length 30 \
-  --epochs 50
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
+source .venv/bin/activate
+python scripts/train_isl_classifier.py \
+  --epochs 5 \
+  --batch_size 16 \
+  --max_samples 5000 \
+  --export_tfjs
 ```
 
-#### Step 3: Convert to TensorFlow Lite
-The training script automatically converts to `.tflite` format optimized for mobile devices.
+## Important path note
 
-### Model Architecture Options
+`train_isl_classifier.py` resolves relative paths from the `scripts/` directory.
 
-**Option 1: MediaPipe Pose + LSTM** (Recommended for Mobile)
-- **Input**: Pose landmarks from 30 frames
-- **Processing**: LSTM layers with attention
-- **Output**: Sign classification (100 classes)
-- **Advantages**: Lightweight, fast inference, robust to scale changes
-- **Size**: ~10MB
+That means:
 
-**Option 2: 3D Convolutional Neural Network**
-- **Input**: Stacked video frames (30 frames × 224×224)
-- **Processing**: 3D convolutions + pooling
-- **Output**: Sign classification
-- **Advantages**: Better spatial-temporal understanding
-- **Size**: ~50MB
+- the default `--tfjs_output_dir` already points to `../web/models/isl_tfjs`
+- if you pass `web/models/isl_tfjs`, it may export into `scripts/web/models/isl_tfjs` instead of the app's real web folder
 
-### Model Performance Metrics
+If needed, copy outputs into:
 
-| Metric | Target | Expected |
-|--------|--------|----------|
-| Accuracy | 85%+ | 87-92% |
-| Top-5 Accuracy | 95%+ | 96-98% |
-| Inference Time | <500ms | 200-400ms |
-| Model Size | <100MB | 10-50MB |
-| RAM Usage | <300MB | 150-250MB |
-
-## 🎬 Features
-
-### Current Implementation
-- ✅ Real-time camera feed capture
-- ✅ Frame preprocessing pipeline
-- ✅ TensorFlow Lite model inference
-- ✅ MediaPipe pose detection integration
-- ✅ Text-to-Speech with Indian English accent
-- ✅ Confidence scoring and visualization
-- ✅ Translation history tracking
-
-### Planned Features
-- 🔄 Multi-language support (Hindi, Punjabi, etc.)
-- 🔄 Sentence-level understanding
-- 🔄 Offline mode with cached TTS voices
-- 🔄 User profile and learning statistics
-- 🔄 Community-driven sign corrections
-- 🔄 Video recording with subtitles
-
-## 📱 Platform Support
-
-| Platform | Status | Notes |
-|----------|--------|-------|
-| iOS | ✅ Ready | iOS 12+ required |
-| Android | ✅ Ready | Android 8+ required |
-| Web | 🔄 In Progress | Camera limited on browsers |
-| macOS | ✅ Ready | Development/Testing |
-| Windows | 🔄 Planned | Coming soon |
-| Linux | 🔄 Planned | Coming soon |
-
-## 🔐 API Integration
-
-### Google Cloud Text-to-Speech
-For natural-sounding Indian English voice synthesis:
-
-```bash
-# Set up credentials
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/credentials.json"
+```zsh
+cp -r scripts/web/models/isl_tfjs/* web/models/isl_tfjs/
+cp saved_model_islar/label_map.json web/models/isl_tfjs/
 ```
 
-### Alternative: Microsoft Azure
-For enterprise-grade speech synthesis with multiple Indian voices.
+## Web model loading details
 
-## 📊 Testing
+For Flutter Web, the app loads:
 
-### Unit Tests
-```bash
+- `model.json` through `web/isl_tfjs.js`
+- `label_map.json` over HTTP from `models/isl_tfjs/label_map.json`
+
+This is why `label_map.json` must exist inside `web/models/isl_tfjs/`.
+
+## Current inference logic
+
+The web camera screen in `lib/features/ui/camera_screen_web.dart`:
+
+- opens the camera with `getUserMedia`
+- draws the current frame to a hidden canvas
+- extracts normalized RGB pixels
+- runs TFJS inference through `lib/services/ml_service_web.dart`
+- chooses the highest probability class
+- shows the label if confidence exceeds `MLModelConstants.confidenceThreshold`
+
+## TTS roadmap
+
+### Current
+
+- `flutter_tts`
+- Indian English locale: `en-IN`
+
+### Planned: Sarvam AI TTS
+
+Target API:
+
+- `https://www.sarvam.ai/apis/text-to-speech/`
+
+Planned integration approach:
+
+1. send recognized text to a backend or secure API client
+2. request speech audio from `Sarvam`
+3. play returned audio in Flutter
+4. keep `flutter_tts` as a local fallback during development if needed
+
+### Suggested config for future Sarvam integration
+
+Do not hardcode secrets in Flutter web code. Prefer a backend proxy or protected environment.
+
+Possible environment variables for a backend service:
+
+```text
+SARVAM_API_KEY=
+SARVAM_TTS_VOICE=
+SARVAM_TTS_LANGUAGE_CODE=
+```
+
+## Known limitations
+
+- web path currently uses frame-by-frame classification only
+- no explicit hand detector or cropper yet
+- no confusion-matrix-based evaluation workflow documented in app
+- `numberOfClasses` in `lib/config/constants.dart` still reflects older assumptions and may need cleanup
+- README reflects current behavior more accurately than older architecture docs that mention MediaPipe or 3D-CNN web inference
+
+## Testing
+
+### Flutter tests
+
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
 flutter test
 ```
 
-### Widget Tests
-```bash
-flutter test test/widget_test.dart
+### Run the web app
+
+```zsh
+cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
+flutter run -d chrome
 ```
 
-### Integration Tests
-```bash
-flutter drive --target=test_driver/app.dart
-```
+## Next recommended engineering tasks
 
-## 🏗️ Build & Deployment
-
-### Android Release Build
-```bash
-flutter build apk --release
-# or for Android App Bundle
-flutter build appbundle --release
-```
-
-### iOS Release Build
-```bash
-flutter build ios --release
-```
-
-### Web Build
-```bash
-flutter build web --release
-```
-
-## 📚 Documentation
-
-- **[PROJECT_PLAN.md](PROJECT_PLAN.md)** - Comprehensive technical specification
-- **[Model Training Guide](scripts/train_model.py)** - Detailed training instructions
-- **[API Documentation](lib/)** - Code API documentation
-
-## 🔬 Research & References
-
-### Key Papers
-- Action Recognition in Videos (3D CNN)
-- Sign Language Recognition with Pose Estimation
-- Transformer-based Temporal Modeling for Action Recognition
-
-### Datasets
+- clean up outdated constants and docs around `100` classes vs current `41` classes
+- add hand detection / crop before classification
+- export and review a confusion matrix for similar classes
+- train longer on the full dataset
+- integrate `Sarvam` TTS behind a secure API boundary
 - ISLAR (Indian Sign Language Action Recognition)
 - ASL Dataset (for comparison)
 - AUTSL (Ankara University Turkish Sign Language)
@@ -308,7 +303,10 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 
 ## 🚦 Roadmap
 
-### Phase 1: MVP (Current)
+### Phase 0: MVP (Current)
+- Basic sign recognition
+
+### Phase 1: MVP (Next)
 - Basic sign recognition
 - Real-time video processing
 - TTS integration
