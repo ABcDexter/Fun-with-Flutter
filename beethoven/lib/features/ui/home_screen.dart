@@ -1,10 +1,11 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 import '../../config/constants.dart';
 import '../../config/providers.dart';
+import '../../utils/app_logger.dart';
 import 'camera_screen_web.dart' if (dart.library.io) 'camera_screen_stub.dart' as camera_impl;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -57,12 +58,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    AppLogger.info('HomeScreen', 'Start Translation tapped (kIsWeb=$kIsWeb)');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => kIsWeb
-                            ? const camera_impl.WebCameraScreen()
-                            : const CameraScreen(),
+                        builder: (context) {
+                          if (kIsWeb) {
+                            AppLogger.info('HomeScreen', 'Navigating to WebCameraScreen');
+                            return const camera_impl.WebCameraScreen();
+                          }
+                          AppLogger.info('HomeScreen', 'Navigating to CameraScreen');
+                          return const CameraScreen();
+                        },
                       ),
                     );
                   },
@@ -200,22 +207,58 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   double _confidence = 0.0;
   bool _isProcessing = false;
   int _lastProcessedMs = 0;
+  int _processedFrameCount = 0;
   final List<List<List<List<num>>>> _frameBuffer = [];
+
+  void _log(String stage, [String? message]) {
+    if (!kDebugMode) {
+      return;
+    }
+    final ts = DateTime.now().toIso8601String();
+    debugPrint('[CameraScreen][$ts][$stage] ${message ?? ''}');
+  }
+
+  void _logError(String stage, Object error, [StackTrace? stackTrace]) {
+    if (!kDebugMode) {
+      return;
+    }
+    final ts = DateTime.now().toIso8601String();
+    debugPrint('[CameraScreen][$ts][$stage][ERROR] $error');
+    if (stackTrace != null) {
+      debugPrint('[CameraScreen][$ts][$stage][STACK] $stackTrace');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _log('initState', 'kIsWeb=$kIsWeb');
+    if (!kIsWeb) {
+      _initializeCamera();
+    }
   }
 
   Future<void> _initializeCamera() async {
+    _log('initializeCamera:start');
+    if (kIsWeb) {
+      _log('initializeCamera:skip', 'Web platform detected');
+      return;
+    }
+
     try {
+      _log('initializeCamera:ml', 'Reading ML service');
       final mlService = ref.read(mlServiceProvider);
       if (!mlService.isInitialized) {
+        _log('initializeCamera:ml', 'Loading model ${MLModelConstants.modelPath}');
         await mlService.loadModel(MLModelConstants.modelPath);
+        _log('initializeCamera:ml', 'Model loaded');
+      } else {
+        _log('initializeCamera:ml', 'Model already initialized');
       }
 
+      _log('initializeCamera:cameras', 'Querying available cameras');
       final cameras = await availableCameras();
+      _log('initializeCamera:cameras', 'Found ${cameras.length} camera(s)');
       if (cameras.isEmpty) {
         throw Exception('No cameras available on this device');
       }
@@ -231,17 +274,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         enableAudio: false,
       );
 
+      _log('initializeCamera:controller', 'Initializing CameraController');
       await controller.initialize();
+      _log('initializeCamera:controller', 'Controller initialized');
 
       if (_isDisposed) {
+        _log('initializeCamera:dispose', 'Widget disposed before init completion');
         await controller.dispose();
         return;
       }
 
       _controller = controller;
       if (mounted) setState(() => _isInitialized = true);
+      _log('initializeCamera:ready', 'Camera UI initialized');
 
       // Start image stream for real-time processing
+      _log('imageStream:start', 'Starting image stream');
       await _controller!.startImageStream((image) async {
         if (_isProcessing) {
           return;
@@ -287,7 +335,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               _recognizedText = '...';
             }
           });
-        } catch (e) {
+
+          _processedFrameCount++;
+          if (_processedFrameCount % 30 == 0) {
+            _log(
+              'inference:result',
+              'frames=$_processedFrameCount class=$maxIndex confidence=${_confidence.toStringAsFixed(4)}',
+            );
+          }
+        } catch (e, st) {
+          _logError('imageStream:processing', e, st);
           if (!mounted) {
             return;
           }
@@ -299,8 +356,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           _isProcessing = false;
         }
       });
-    } catch (e) {
-      print('Error initializing camera: $e');
+      _log('imageStream:started');
+    } catch (e, st) {
+      _logError('initializeCamera', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
@@ -311,8 +369,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   @override
   void dispose() {
+    _log('dispose:start', 'Disposing CameraScreen');
     _isDisposed = true;
     _controller?.dispose();
+    _log('dispose:done');
     super.dispose();
   }
 
@@ -379,6 +439,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _log('build', 'kIsWeb=$kIsWeb isInitialized=$_isInitialized');
+    if (kIsWeb) {
+      return const camera_impl.WebCameraScreen();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Language Detection'),

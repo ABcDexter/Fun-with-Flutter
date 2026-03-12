@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart' as tflite;
 import '../config/constants.dart';
+import '../utils/app_logger.dart';
 
 class ISLMLService {
   late tflite.Interpreter _interpreter;
@@ -11,15 +12,16 @@ class ISLMLService {
   /// Load TensorFlow Lite model
   Future<void> loadModel(String modelPath) async {
     try {
+      AppLogger.info('MLServiceMobile', 'loadModel() path=$modelPath');
       // Load the model from assets
       final buffer = await rootBundle.load(modelPath);
-      _interpreter = await tflite.Interpreter.fromBuffer(
+      _interpreter = tflite.Interpreter.fromBuffer(
         buffer.buffer.asUint8List(),
       );
       _isInitialized = true;
-      print('Model loaded successfully');
-    } catch (e) {
-      print('Error loading model: $e');
+      AppLogger.info('MLServiceMobile', 'Model loaded successfully');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'loadModel');
       rethrow;
     }
   }
@@ -56,8 +58,8 @@ class ISLMLService {
       final output = List<double>.filled(100, 0); // 100 classes for ISL signs
       _interpreter.run(input, output);
       return output;
-    } catch (e) {
-      print('Error running inference: $e');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'runInference');
       rethrow;
     }
   }
@@ -77,8 +79,8 @@ class ISLMLService {
       );
       _interpreter.run(input, output);
       return output.first;
-    } catch (e) {
-      print('Error running inference: $e');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'runInference3dcnn');
       rethrow;
     }
   }
@@ -112,8 +114,8 @@ class ISLMLService {
         'confidence': maxValue,
         'allPredictions': predictions,
       };
-    } catch (e) {
-      print('Error processing frame: $e');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'processFrame');
       rethrow;
     }
   }
@@ -126,8 +128,8 @@ class ISLMLService {
         'shape': inputTensors[0].shape,
         'type': inputTensors[0].type,
       };
-    } catch (e) {
-      print('Error getting input details: $e');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'getInputDetails');
       return {};
     }
   }
@@ -140,8 +142,8 @@ class ISLMLService {
         'shape': outputTensors[0].shape,
         'type': outputTensors[0].type,
       };
-    } catch (e) {
-      print('Error getting output details: $e');
+    } catch (e, st) {
+      AppLogger.error('MLServiceMobile', e, st, 'getOutputDetails');
       return {};
     }
   }
@@ -149,6 +151,7 @@ class ISLMLService {
   /// Dispose model
   void dispose() {
     if (_isInitialized) {
+      AppLogger.info('MLServiceMobile', 'dispose()');
       _interpreter.close();
       _isInitialized = false;
     }

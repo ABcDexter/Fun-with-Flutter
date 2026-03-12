@@ -1,5 +1,5 @@
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
 
 class CameraService {
   late CameraController _controller;
@@ -12,7 +12,9 @@ class CameraService {
   /// Initialize camera service and get available cameras
   Future<void> initialize() async {
     try {
+      AppLogger.info('CameraService', 'initialize() started');
       cameras = await availableCameras();
+      AppLogger.info('CameraService', 'availableCameras() -> ${cameras.length}');
       if (cameras.isEmpty) {
         throw Exception('No cameras available');
       }
@@ -31,8 +33,9 @@ class CameraService {
 
       await _controller.initialize();
       _isInitialized = true;
-    } catch (e) {
-      debugPrint('Error initializing camera: $e');
+      AppLogger.info('CameraService', 'CameraController initialized');
+    } catch (e, st) {
+      AppLogger.error('CameraService', e, st, 'initialize');
       rethrow;
     }
   }
@@ -43,11 +46,13 @@ class CameraService {
       throw Exception('Camera not initialized');
     }
     try {
+      AppLogger.info('CameraService', 'startPreview() started');
       await _controller.startImageStream((image) {
         // Process frames for ML inference
       });
-    } catch (e) {
-      debugPrint('Error starting preview: $e');
+      AppLogger.info('CameraService', 'startPreview() stream started');
+    } catch (e, st) {
+      AppLogger.error('CameraService', e, st, 'startPreview');
       rethrow;
     }
   }
@@ -56,9 +61,10 @@ class CameraService {
   Future<void> stopPreview() async {
     if (_isInitialized) {
       try {
+        AppLogger.info('CameraService', 'stopPreview()');
         await _controller.stopImageStream();
-      } catch (e) {
-        debugPrint('Error stopping preview: $e');
+      } catch (e, st) {
+        AppLogger.error('CameraService', e, st, 'stopPreview');
       }
     }
   }
@@ -67,10 +73,11 @@ class CameraService {
   Future<void> dispose() async {
     if (_isInitialized) {
       try {
+        AppLogger.info('CameraService', 'dispose()');
         await _controller.dispose();
         _isInitialized = false;
-      } catch (e) {
-        debugPrint('Error disposing camera: $e');
+      } catch (e, st) {
+        AppLogger.error('CameraService', e, st, 'dispose');
       }
     }
   }
@@ -81,9 +88,10 @@ class CameraService {
       throw Exception('Camera not initialized');
     }
     try {
+      AppLogger.info('CameraService', 'captureFrame()');
       return await _controller.takePicture();
-    } catch (e) {
-      debugPrint('Error capturing frame: $e');
+    } catch (e, st) {
+      AppLogger.error('CameraService', e, st, 'captureFrame');
       return null;
     }
   }

@@ -2,6 +2,7 @@
 // Uses browser's getUserMedia API directly via dart:js_interop
 import 'dart:js_interop';
 
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web/web.dart' as web;
@@ -33,14 +34,35 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   web.HTMLVideoElement? _videoElement;
   web.MediaStream? _mediaStream;
 
+  void _log(String stage, [String? message]) {
+    if (!kDebugMode) {
+      return;
+    }
+    final ts = DateTime.now().toIso8601String();
+    debugPrint('[WebCameraScreen][$ts][$stage] ${message ?? ''}');
+  }
+
+  void _logError(String stage, Object error, [StackTrace? stackTrace]) {
+    if (!kDebugMode) {
+      return;
+    }
+    final ts = DateTime.now().toIso8601String();
+    debugPrint('[WebCameraScreen][$ts][$stage][ERROR] $error');
+    if (stackTrace != null) {
+      debugPrint('[WebCameraScreen][$ts][$stage][STACK] $stackTrace');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _viewId = 'beethoven-webcam-${_viewCounter++}';
+    _log('initState', 'viewId=$_viewId');
     _registerViewAndStart();
   }
 
   Future<void> _registerViewAndStart() async {
+    _log('registerView:start');
     // Create the <video> element
     final video =
         web.document.createElement('video') as web.HTMLVideoElement;
@@ -59,6 +81,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         (int id) => video,
       );
       _viewRegistered = true;
+      _log('registerView:done', 'Factory registered for $_viewId');
     }
 
     await _startCamera(video);
@@ -66,21 +89,29 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
 
   Future<void> _startCamera(web.HTMLVideoElement video) async {
     try {
+      _log('startCamera:start');
       // Load ML model
       final mlService = ref.read(mlServiceProvider);
       if (!mlService.isInitialized) {
+        _log('startCamera:ml', 'Loading model ${MLModelConstants.webModelPath}');
         await mlService.loadModel(MLModelConstants.modelPath);
+        _log('startCamera:ml', 'Model loaded');
+      } else {
+        _log('startCamera:ml', 'Model already initialized');
       }
 
       // getUserMedia via JS interop — avoids camera_web entirely
+      _log('startCamera:media', 'Requesting getUserMedia');
       final stream = await web.window.navigator.mediaDevices
           .getUserMedia(web.MediaStreamConstraints(
         video: true.toJS,
         audio: false.toJS,
       ))
           .toDart;
+      _log('startCamera:media', 'getUserMedia resolved');
 
       if (_isDisposed) {
+        _log('startCamera:dispose', 'Disposed before stream attach');
         _stopStream(stream);
         return;
       }
@@ -91,7 +122,9 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       if (mounted) {
         setState(() => _isInitialized = true);
       }
-    } catch (e) {
+      _log('startCamera:ready', 'Video stream attached');
+    } catch (e, st) {
+      _logError('startCamera', e, st);
       if (mounted) {
         setState(() => _errorMessage = 'Camera error: $e');
       }
@@ -99,14 +132,17 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   }
 
   void _stopStream(web.MediaStream? stream) {
+    _log('stopStream', 'Stopping media tracks');
     stream?.getTracks().toDart.forEach((track) => track.stop());
   }
 
   @override
   void dispose() {
+    _log('dispose:start', 'Disposing WebCameraScreen');
     _isDisposed = true;
     _stopStream(_mediaStream);
     _videoElement?.srcObject = null;
+    _log('dispose:done');
     super.dispose();
   }
 

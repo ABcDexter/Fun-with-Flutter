@@ -1,4 +1,5 @@
 import 'package:flutter_tts/flutter_tts.dart';
+import '../utils/app_logger.dart';
 
 class TextToSpeechService {
   final FlutterTts _tts = FlutterTts();
@@ -9,6 +10,7 @@ class TextToSpeechService {
   /// Initialize TTS service
   Future<void> initialize() async {
     try {
+      AppLogger.info('TTSService', 'initialize() started');
       // Set language to Indian English
       await _tts.setLanguage('en-IN');
 
@@ -18,8 +20,9 @@ class TextToSpeechService {
 
       // Voice is set, initialization complete
       _isInitialized = true;
-    } catch (e) {
-      print('Error initializing TTS: $e');
+      AppLogger.info('TTSService', 'initialize() completed');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'initialize');
       rethrow;
     }
   }
@@ -31,9 +34,10 @@ class TextToSpeechService {
     }
 
     try {
+      AppLogger.info('TTSService', 'speak() textLength=${text.length}');
       await _tts.speak(text);
-    } catch (e) {
-      print('Error speaking: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'speak');
       rethrow;
     }
   }
@@ -41,54 +45,60 @@ class TextToSpeechService {
   /// Stop current speech
   Future<void> stop() async {
     try {
+      AppLogger.info('TTSService', 'stop()');
       await _tts.stop();
-    } catch (e) {
-      print('Error stopping speech: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'stop');
     }
   }
 
   /// Pause speech
   Future<void> pause() async {
     try {
+      AppLogger.info('TTSService', 'pause()');
       await _tts.pause();
-    } catch (e) {
-      print('Error pausing speech: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'pause');
     }
   }
 
   /// Set speech rate (0.0 - 2.0)
   Future<void> setSpeechRate(double rate) async {
     try {
+      AppLogger.info('TTSService', 'setSpeechRate($rate)');
       await _tts.setSpeechRate(rate.clamp(0.0, 2.0));
-    } catch (e) {
-      print('Error setting speech rate: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'setSpeechRate');
     }
   }
 
   /// Set pitch (0.5 - 2.0)
   Future<void> setPitch(double pitch) async {
     try {
+      AppLogger.info('TTSService', 'setPitch($pitch)');
       await _tts.setPitch(pitch.clamp(0.5, 2.0));
-    } catch (e) {
-      print('Error setting pitch: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'setPitch');
     }
   }
 
   /// Dispose TTS resources
   Future<void> dispose() async {
     try {
+      AppLogger.info('TTSService', 'dispose()');
       await _tts.stop();
-    } catch (e) {
-      print('Error disposing TTS: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'dispose');
     }
   }
 
   /// Get available voices
   Future<List<dynamic>> getAvailableVoices() async {
     try {
+      AppLogger.info('TTSService', 'getAvailableVoices()');
       return await _tts.getVoices;
-    } catch (e) {
-      print('Error getting voices: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'getAvailableVoices');
       return [];
     }
   }
@@ -96,9 +106,10 @@ class TextToSpeechService {
   /// Set specific voice
   Future<void> setVoice(String voiceId) async {
     try {
+      AppLogger.info('TTSService', 'setVoice($voiceId)');
       await _tts.setVoice({'name': voiceId, 'locale': 'en-IN'});
-    } catch (e) {
-      print('Error setting voice: $e');
+    } catch (e, st) {
+      AppLogger.error('TTSService', e, st, 'setVoice');
     }
   }
 }
