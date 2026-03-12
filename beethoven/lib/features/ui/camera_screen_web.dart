@@ -36,6 +36,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   String _recognizedText = '...';
   double _confidence = 0.0;
   bool _isHandDetected = false;
+  Map<String, double>? _lastHandBox;
   String? _errorMessage;
   bool _isProcessing = false;
   int _processedFrameCount = 0;
@@ -188,6 +189,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       final videoHeight = _videoElement!.videoHeight.toDouble();
       final handBox = await _detectHandBoundingBox();
       _isHandDetected = handBox != null;
+      _lastHandBox = handBox;
 
       if (handBox != null) {
         final sx = (handBox['x']!.clamp(0.0, 1.0)) * videoWidth;
@@ -517,6 +519,20 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                     ),
                     Positioned(
                       top: 16,
+                      left: 16,
+                      right: 16,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: CustomPaint(
+                          painter: _HandBoundingBoxPainter(
+                            normalizedBox: _lastHandBox,
+                            isDetected: _isHandDetected,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 16,
                       right: 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -529,8 +545,8 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          _isHandDetected
-                              ? 'Debug: Hand detected'
+                          _isHandDetected && _lastHandBox != null
+                              ? 'Debug: Hand ${(100 * _lastHandBox!["width"]!).toStringAsFixed(0)}% x ${(100 * _lastHandBox!["height"]!).toStringAsFixed(0)}%'
                               : 'Debug: No hand',
                           style: const TextStyle(
                             color: Colors.white,
@@ -586,5 +602,51 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                   ],
                 ),
     );
+  }
+}
+
+class _HandBoundingBoxPainter extends CustomPainter {
+  final Map<String, double>? normalizedBox;
+  final bool isDetected;
+
+  _HandBoundingBoxPainter({
+    required this.normalizedBox,
+    required this.isDetected,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!isDetected || normalizedBox == null) {
+      return;
+    }
+
+    final left = (normalizedBox!['x'] ?? 0.0) * size.width;
+    final top = (normalizedBox!['y'] ?? 0.0) * size.height;
+    final width = (normalizedBox!['width'] ?? 0.0) * size.width;
+    final height = (normalizedBox!['height'] ?? 0.0) * size.height;
+
+    if (width <= 2 || height <= 2) {
+      return;
+    }
+
+    final rect = Rect.fromLTWH(left, top, width, height);
+
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = Colors.lightGreenAccent;
+
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.lightGreenAccent.withValues(alpha: 0.12);
+
+    canvas.drawRect(rect, fillPaint);
+    canvas.drawRect(rect, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _HandBoundingBoxPainter oldDelegate) {
+    return oldDelegate.normalizedBox != normalizedBox ||
+        oldDelegate.isDetected != isDetected;
   }
 }
