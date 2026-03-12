@@ -36,6 +36,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   String _recognizedText = '...';
   double _confidence = 0.0;
   bool _isHandDetected = false;
+  int _detectedHandsCount = 0;
   Map<String, double>? _lastHandBox;
   String? _errorMessage;
   bool _isProcessing = false;
@@ -84,6 +85,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         'y': (js_util.getProperty(result, 'y') as num).toDouble(),
         'width': (js_util.getProperty(result, 'width') as num).toDouble(),
         'height': (js_util.getProperty(result, 'height') as num).toDouble(),
+        'handsCount': (js_util.getProperty(result, 'handsCount') as num?)?.toDouble() ?? 1.0,
       };
     } catch (e) {
       return null;
@@ -190,6 +192,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       final handBox = await _detectHandBoundingBox();
       _isHandDetected = handBox != null;
       _lastHandBox = handBox;
+      _detectedHandsCount = (handBox?['handsCount'] ?? 0.0).round();
 
       if (handBox != null) {
         final sx = (handBox['x']!.clamp(0.0, 1.0)) * videoWidth;
@@ -546,7 +549,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                         ),
                         child: Text(
                           _isHandDetected && _lastHandBox != null
-                              ? 'Debug: Hand ${(100 * _lastHandBox!["width"]!).toStringAsFixed(0)}% x ${(100 * _lastHandBox!["height"]!).toStringAsFixed(0)}%'
+                              ? 'Debug: Hands=$_detectedHandsCount, ${(100 * _lastHandBox!["width"]!).toStringAsFixed(0)}% x ${(100 * _lastHandBox!["height"]!).toStringAsFixed(0)}%'
                               : 'Debug: No hand',
                           style: const TextStyle(
                             color: Colors.white,

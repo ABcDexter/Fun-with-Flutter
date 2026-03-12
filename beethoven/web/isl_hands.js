@@ -45,6 +45,31 @@ function computeBoxFromLandmarks(landmarks) {
   };
 }
 
+function mergeBoxes(boxes) {
+  if (!boxes || boxes.length === 0) {
+    return null;
+  }
+
+  let minX = 1;
+  let minY = 1;
+  let maxX = 0;
+  let maxY = 0;
+
+  for (const box of boxes) {
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+    maxX = Math.max(maxX, box.x + box.width);
+    maxY = Math.max(maxY, box.y + box.height);
+  }
+
+  return {
+    x: clamp01(minX),
+    y: clamp01(minY),
+    width: Math.max(0.0001, clamp01(maxX) - clamp01(minX)),
+    height: Math.max(0.0001, clamp01(maxY) - clamp01(minY)),
+  };
+}
+
 async function init() {
   if (state.initialized) {
     return true;
@@ -63,7 +88,7 @@ async function init() {
         modelAssetPath:
           'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
       },
-      numHands: 1,
+      numHands: 2,
       runningMode: 'VIDEO',
       minHandDetectionConfidence: 0.5,
       minHandPresenceConfidence: 0.5,
@@ -91,14 +116,19 @@ async function detect(videoElement) {
     return null;
   }
 
-  const landmarks = result.landmarks[0];
-  const box = computeBoxFromLandmarks(landmarks);
+  const boxes = result.landmarks.map((landmarks) => computeBoxFromLandmarks(landmarks));
+  const box = mergeBoxes(boxes);
+  if (!box) {
+    return null;
+  }
+  const handsCount = Math.min(2, result.landmarks.length);
 
   return {
     x: box.x,
     y: box.y,
     width: box.width,
     height: box.height,
+    handsCount,
     score: 1.0,
   };
 }
