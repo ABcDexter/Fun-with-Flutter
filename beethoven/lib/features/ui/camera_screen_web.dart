@@ -3,10 +3,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:js_util' as js_util;
 
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
@@ -25,6 +25,7 @@ class WebCameraScreen extends ConsumerStatefulWidget {
 
 class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   late List<String> _classLabels = [];
+  static const int _smoothingWindow = 7;
 
   static int _viewCounter = 0;
   late final String _viewId;
@@ -34,15 +35,59 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   bool _viewRegistered = false;
   String _recognizedText = '...';
   double _confidence = 0.0;
+  bool _isHandDetected = false;
   String? _errorMessage;
   bool _isProcessing = false;
   int _processedFrameCount = 0;
+  final List<List<double>> _predictionBuffer = [];
 
   web.HTMLVideoElement? _videoElement;
   web.MediaStream? _mediaStream;
   web.CanvasRenderingContext2D? _canvasContext;
   web.HTMLCanvasElement? _canvas;
   int? _inferenceLoopId;
+
+  Future<void> _initializeHandDetector() async {
+    try {
+      final handsBridge = js_util.getProperty(web.window, 'islHands');
+      if (handsBridge == null) {
+        _log('hands:init', 'islHands bridge not available, using full-frame fallback');
+        return;
+      }
+      await js_util.promiseToFuture<void>(
+        js_util.callMethod(handsBridge, 'init', []),
+      );
+      _log('hands:init', 'MediaPipe Hands initialized');
+    } catch (e, st) {
+      _logError('hands:init', e, st);
+    }
+  }
+
+  Future<Map<String, double>?> _detectHandBoundingBox() async {
+    try {
+      final handsBridge = js_util.getProperty(web.window, 'islHands');
+      if (handsBridge == null || _videoElement == null) {
+        return null;
+      }
+
+      final dynamic result = await js_util.promiseToFuture<dynamic>(
+        js_util.callMethod(handsBridge, 'detect', [_videoElement]),
+      );
+
+      if (result == null) {
+        return null;
+      }
+
+      return {
+        'x': (js_util.getProperty(result, 'x') as num).toDouble(),
+        'y': (js_util.getProperty(result, 'y') as num).toDouble(),
+        'width': (js_util.getProperty(result, 'width') as num).toDouble(),
+        'height': (js_util.getProperty(result, 'height') as num).toDouble(),
+      };
+    } catch (e) {
+      return null;
+    }
+  }
 
   Future<void> _loadLabels() async {
     try {
@@ -87,6 +132,27 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
     return 'unknown_$index'; // Fallback if index is out of bounds
   }
 
+  List<double> _applyPredictionSmoothing(List<double> predictions) {
+    _predictionBuffer.add(predictions);
+    if (_predictionBuffer.length > _smoothingWindow) {
+      _predictionBuffer.removeAt(0);
+    }
+
+    final smoothed = List<double>.filled(predictions.length, 0.0);
+    for (final probs in _predictionBuffer) {
+      for (int i = 0; i < probs.length; i++) {
+        smoothed[i] += probs[i];
+      }
+    }
+
+    final divisor = _predictionBuffer.length.toDouble();
+    for (int i = 0; i < smoothed.length; i++) {
+      smoothed[i] = smoothed[i] / divisor;
+    }
+
+    return smoothed;
+  }
+
   void _log(String stage, [String? message]) {
     if (!kDebugMode) {
       return;
@@ -107,7 +173,8 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   }
 
   /// Extract a frame from the video element via canvas
-  List<List<List<num>>>? _extractFrameFromVideo() {
+  /// Uses MediaPipe hand box when available, otherwise full frame fallback.
+  Future<List<List<List<num>>>?> _extractFrameFromVideo() async {
     if (_videoElement == null ||
         _canvas == null ||
         _canvasContext == null ||
@@ -117,12 +184,51 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
     }
 
     try {
-      // Draw current video frame to canvas
-      _canvasContext!.drawImage(
-        _videoElement! as web.CanvasImageSource,
-        0,
-        0,
-      );
+      final videoWidth = _videoElement!.videoWidth.toDouble();
+      final videoHeight = _videoElement!.videoHeight.toDouble();
+      final handBox = await _detectHandBoundingBox();
+      _isHandDetected = handBox != null;
+
+      if (handBox != null) {
+        final sx = (handBox['x']!.clamp(0.0, 1.0)) * videoWidth;
+        final sy = (handBox['y']!.clamp(0.0, 1.0)) * videoHeight;
+        final sw = (handBox['width']!.clamp(0.0, 1.0)) * videoWidth;
+        final sh = (handBox['height']!.clamp(0.0, 1.0)) * videoHeight;
+
+        if (sw > 2 && sh > 2) {
+          js_util.callMethod(
+            _canvasContext!,
+            'drawImage',
+            [
+              _videoElement! as web.CanvasImageSource,
+              sx,
+              sy,
+              sw,
+              sh,
+              0,
+              0,
+              _canvas!.width.toDouble(),
+              _canvas!.height.toDouble(),
+            ],
+          );
+        } else {
+          _canvasContext!.drawImageScaled(
+            _videoElement! as web.CanvasImageSource,
+            0,
+            0,
+            _canvas!.width.toDouble(),
+            _canvas!.height.toDouble(),
+          );
+        }
+      } else {
+        _canvasContext!.drawImageScaled(
+          _videoElement! as web.CanvasImageSource,
+          0,
+          0,
+          _canvas!.width.toDouble(),
+          _canvas!.height.toDouble(),
+        );
+      }
 
       // Get image data from canvas
       final imageData = _canvasContext!.getImageData(
@@ -182,7 +288,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
 
   Future<void> _processFrameAsync() async {
     try {
-      final frame = _extractFrameFromVideo();
+      final frame = await _extractFrameFromVideo();
       if (frame == null) {
         _isProcessing = false;
         return;
@@ -192,13 +298,14 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       final mlService = ref.read(mlServiceProvider);
       final input = [frame];
       final predictions = await mlService.runInference(input);
+      final smoothedPredictions = _applyPredictionSmoothing(predictions);
 
       // Find max prediction
       int maxIndex = 0;
-      double maxValue = predictions.first;
-      for (int i = 1; i < predictions.length; i++) {
-        if (predictions[i] > maxValue) {
-          maxValue = predictions[i];
+      double maxValue = smoothedPredictions.first;
+      for (int i = 1; i < smoothedPredictions.length; i++) {
+        if (smoothedPredictions[i] > maxValue) {
+          maxValue = smoothedPredictions[i];
           maxIndex = i;
         }
       }
@@ -215,7 +322,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         if (_processedFrameCount == 0 || _processedFrameCount % 100 == 0) {
           _log(
             'inference:diagnostic',
-            'Labels loaded: ${_classLabels.length}, predictions length: ${predictions.length}, maxIndex: $maxIndex, label: ${_classNameForIndex(maxIndex)}',
+            'Labels loaded: ${_classLabels.length}, predictions length: ${predictions.length}, handDetected=$_isHandDetected, smoothingBuffer=${_predictionBuffer.length}, maxIndex: $maxIndex, label: ${_classNameForIndex(maxIndex)}',
           );
         }
         
@@ -298,6 +405,8 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         _log('startCamera:ml', 'Model already initialized');
       }
 
+      await _initializeHandDetector();
+
       // Create hidden canvas for frame extraction
       _log('startCamera:canvas', 'Creating canvas for frame extraction');
       _canvas = web.document.createElement('canvas') as web.HTMLCanvasElement;
@@ -356,6 +465,8 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       _log('dispose:loop', 'Clearing inference loop $_inferenceLoopId');
       web.window.clearInterval(_inferenceLoopId!);
     }
+
+    _predictionBuffer.clear();
     
     _stopStream(_mediaStream);
     _videoElement?.srcObject = null;
@@ -403,6 +514,31 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                     // Native browser video element
                     SizedBox.expand(
                       child: HtmlElementView(viewType: _viewId),
+                    ),
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (_isHandDetected ? Colors.green : Colors.red)
+                              .withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          _isHandDetected
+                              ? 'Debug: Hand detected'
+                              : 'Debug: No hand',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
                     // Recognition overlay
                     Positioned(
