@@ -246,16 +246,43 @@ cd /Users/anubhavbalodhi/learn/Udemy/Flutter-projects/beethoven
 flutter run -d chrome
 ```
 
-## Next recommended engineering tasks
+## TODOs (Clear Roadmap)
 
-- clean up outdated constants and docs around `100` classes vs current `41` classes
-- add hand detection / crop before classification
-- export and review a confusion matrix for similar classes
-- train longer on the full dataset
-- integrate `Sarvam` TTS behind a secure API boundary
-- ISLAR (Indian Sign Language Action Recognition)
-- ASL Dataset (for comparison)
-- AUTSL (Ankara University Turkish Sign Language)
+### ✅ Done
+
+- [x] Web inference switched to single-frame TFJS classifier
+- [x] `label_map.json` loading added for class-name mapping
+- [x] MediaPipe Hands integrated for hand-region detection
+- [x] Hand crop + normalization applied before inference
+- [x] Prediction smoothing window added
+- [x] Debug badge + hand bounding box overlay added
+
+### 🔥 High Priority (Next)
+
+- [ ] Align class constants in app (`100` vs `41`) across config/UI/docs
+- [ ] Add confusion-matrix evaluation script/report for `1` vs `l` and similar pairs
+- [ ] Retrain with larger/full dataset + longer schedule (not just smoke-size run)
+- [ ] Tune threshold and smoothing window with validation metrics
+- [ ] Add option to require `2` hands for two-hand signs before prediction
+
+### 🧪 Model Quality TODOs
+
+- [ ] Add stronger augmentation (lighting, contrast, slight rotation/translation)
+- [ ] Add hard-negative samples (no hand / background-only frames)
+- [ ] Evaluate per-class precision/recall and identify weak labels
+- [ ] Add validation script for webcam-domain performance
+
+### 🎙️ TTS TODOs
+
+- [ ] Integrate `Sarvam` TTS API through a secure backend/proxy
+- [ ] Keep `flutter_tts` as fallback when API is unavailable
+- [ ] Add voice/language config for runtime switching
+
+### 🧹 Cleanup TODOs
+
+- [ ] Remove stale README sections that mention deprecated pipelines
+- [ ] Add architecture diagram for current MediaPipe + TFJS flow
+- [ ] Add reproducible training presets (`fast`, `balanced`, `full`)
 
 ## 💡 Technical Insights
 
