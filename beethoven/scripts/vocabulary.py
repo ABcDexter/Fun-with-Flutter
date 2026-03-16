@@ -8,7 +8,30 @@ ISL_VOCABULARY_50 = {
     0: {"sign": "A", "english": "A", "category": "alphabet"},
     1: {"sign": "B", "english": "B", "category": "alphabet"},
     2: {"sign": "C", "english": "C", "category": "alphabet"},
-    # ... (A-Z alphabets)
+    3: {"sign": "D", "english": "D", "category": "alphabet"},
+    4: {"sign": "E", "english": "E", "category": "alphabet"},
+    5: {"sign": "F", "english": "F", "category": "alphabet"},
+    6: {"sign": "G", "english": "G", "category": "alphabet"},
+    7: {"sign": "H", "english": "H", "category": "alphabet"},
+    8: {"sign": "I", "english": "I", "category": "alphabet"},
+    9: {"sign": "J", "english": "J", "category": "alphabet"},
+    10: {"sign": "K", "english": "K", "category": "alphabet"},
+    11: {"sign": "L", "english": "L", "category": "alphabet"},
+    12: {"sign": "M", "english": "M", "category": "alphabet"},
+    13: {"sign": "N", "english": "N", "category": "alphabet"},
+    14: {"sign": "O", "english": "O", "category": "alphabet"},
+    15: {"sign": "P", "english": "P", "category": "alphabet"},
+    16: {"sign": "Q", "english": "Q", "category": "alphabet"},
+    17: {"sign": "R", "english": "R", "category": "alphabet"},
+    18: {"sign": "S", "english": "S", "category": "alphabet"},
+    19: {"sign": "T", "english": "T", "category": "alphabet"},
+    20: {"sign": "U", "english": "U", "category": "alphabet"},
+    21: {"sign": "V", "english": "V", "category": "alphabet"},
+    22: {"sign": "W", "english": "W", "category": "alphabet"},
+    23: {"sign": "X", "english": "X", "category":   "alphabet"},
+    24: {"sign": "Y", "english": "Y", "category": "alphabet"},
+    25: {"sign": "Z", "english": "Z", "category": "alphabet"},
+
     26: {"sign": "HELLO", "english": "hello", "category": "greeting"},
     27: {"sign": "THANK_YOU", "english": "thank you", "category": "emotion"},
     28: {"sign": "YES", "english": "yes", "category": "affirmation"},
@@ -21,7 +44,7 @@ ISL_VOCABULARY_50 = {
     35: {"sign": "SAD", "english": "sad", "category": "emotion"},
     36: {"sign": "LOVE", "english": "love", "category": "emotion"},
     37: {"sign": "HATE", "english": "hate", "category": "emotion"},
-    # ... continue with more signs
+    
 }
 
 # Extended vocabulary (100+ signs)

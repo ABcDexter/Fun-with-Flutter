@@ -7,13 +7,45 @@ Indian Sign Language to text and speech using Flutter plus TensorFlow.
 `Beethoven` currently runs a web camera pipeline that:
 
 - captures live frames in Flutter Web
-- resizes frames to `224x224`
-- normalizes RGB values to `[0, 1]`
-- sends a single frame to a TensorFlow.js image classifier
-- maps the top prediction through `label_map.json`
-- shows the predicted label and confidence in the UI
+- detects hand regions using MediaPipe Hands
+- crops and normalizes hand regions to `224x224`
+- applies temporal smoothing over 7 frames for stability
+- sends processed frames to a TensorFlow.js image classifier
+- performs sign segmentation by detecting sign start/end based on confidence
+- builds sentences by accumulating completed signs
+- maps predictions through `label_map.json`
+- shows current sign, confidence, and full sentence in the UI
+- provides text-to-speech output for recognized signs
 
-The current web flow uses a **single-frame 2D classifier**, not the older 30-frame 3D-CNN path.
+The current web flow uses a **hand-cropped 2D classifier with temporal processing**, supporting real-time sentence formation from continuous signing.
+
+## Runtime Flow
+
+```mermaid
+flowchart TD
+    A[Camera Frame Capture] --> B[MediaPipe Hands Detection]
+    B --> C{Hand Detected?}
+    C -->|No| D[Full Frame Processing]
+    C -->|Yes| E[Crop Hand Region]
+    D --> F[Resize to 224x224]
+    E --> F
+    F --> G[Normalize RGB [0,1]]
+    G --> H[Apply 7-Frame Temporal Smoothing]
+    H --> I[TFJS Model Inference]
+    I --> J{Confidence > Threshold?}
+    J -->|No| K[Increment Low Confidence Counter]
+    J -->|Yes| L[Set Current Sign]
+    K --> M{Counter > 10 Frames?}
+    M -->|No| N[Continue Processing]
+    M -->|Yes| O[Add Sign to Sentence]
+    L --> N
+    O --> P[Reset Counters]
+    P --> N
+    N --> Q[Update UI: Current Sign + Sentence]
+    Q --> A
+```
+
+This flowchart shows the complete pipeline from camera input to sentence output, including hand detection, temporal smoothing, sign segmentation, and sentence building.
 
 ## Current Status
 
@@ -256,6 +288,9 @@ flutter run -d chrome
 - [x] Hand crop + normalization applied before inference
 - [x] Prediction smoothing window added
 - [x] Debug badge + hand bounding box overlay added
+- [x] Sign segmentation with confidence-based sign end detection
+- [x] Sentence builder that accumulates completed signs
+- [x] Real-time sentence display with clear button
 
 ### 🔥 High Priority (Next)
 

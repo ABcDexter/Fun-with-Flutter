@@ -26,6 +26,7 @@ class WebCameraScreen extends ConsumerStatefulWidget {
 class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   late List<String> _classLabels = [];
   static const int _smoothingWindow = 7;
+  static const int _signEndThreshold = 10; // Frames of low confidence to end a sign
 
   static int _viewCounter = 0;
   late final String _viewId;
@@ -34,6 +35,8 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   bool _isDisposed = false;
   bool _viewRegistered = false;
   String _recognizedText = '...';
+  String _currentSign = '';
+  List<String> _sentence = [];
   double _confidence = 0.0;
   bool _isHandDetected = false;
   int _detectedHandsCount = 0;
@@ -41,6 +44,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
   String? _errorMessage;
   bool _isProcessing = false;
   int _processedFrameCount = 0;
+  int _lowConfidenceFrames = 0;
   final List<List<double>> _predictionBuffer = [];
 
   web.HTMLVideoElement? _videoElement;
@@ -323,6 +327,20 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
       setState(() {
         _confidence = maxValue;
         
+        // Sign segmentation: Update current sign or end it
+        if (_confidence >= MLModelConstants.confidenceThreshold) {
+          _currentSign = _classNameForIndex(maxIndex);
+          _lowConfidenceFrames = 0;
+        } else {
+          _lowConfidenceFrames++;
+          if (_lowConfidenceFrames >= _signEndThreshold && _currentSign.isNotEmpty) {
+            _sentence.add(_currentSign);
+            _currentSign = '';
+            _lowConfidenceFrames = 0;
+            _log('sign:end', 'Added sign to sentence: ${_sentence.last}');
+          }
+        }
+        
         // Diagnostic: log label loading status
         if (_processedFrameCount == 0 || _processedFrameCount % 100 == 0) {
           _log(
@@ -333,13 +351,9 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
         
         _log(
           'inference:prediction',
-          'frames=$_processedFrameCount class=${_classNameForIndex(maxIndex)}($maxIndex) confidence=${_confidence.toStringAsFixed(4)}',
+          'frames=$_processedFrameCount class=${_classNameForIndex(maxIndex)}($maxIndex) confidence=${_confidence.toStringAsFixed(4)} currentSign=$_currentSign sentence=${_sentence.join(" ")}',
         );
-        if (_confidence >= MLModelConstants.confidenceThreshold) {
-          _recognizedText = _classNameForIndex(maxIndex);
-        } else {
-          _recognizedText = '...';
-        }
+        _recognizedText = _currentSign.isNotEmpty ? _currentSign : '...';
       });
 
       _processedFrameCount++;
@@ -472,6 +486,7 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
     }
 
     _predictionBuffer.clear();
+    _sentence.clear();
     
     _stopStream(_mediaStream);
     _videoElement?.srcObject = null;
@@ -571,8 +586,9 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Current sign
                             Text(
-                              'Recognized: $_recognizedText',
+                              'Current Sign: $_recognizedText',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -580,6 +596,17 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
+                            // Sentence
+                            if (_sentence.isNotEmpty) ...[
+                              Text(
+                                'Sentence: ${_sentence.join(" ")}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
                             LinearProgressIndicator(
                               value: _confidence,
                               minHeight: 8,
@@ -591,12 +618,32 @@ class _WebCameraScreenState extends ConsumerState<WebCameraScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              'Confidence: ${(_confidence * 100).toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Confidence: ${(_confidence * 100).toStringAsFixed(1)}%',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (_sentence.isNotEmpty)
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _sentence.clear();
+                                        _currentSign = '';
+                                        _lowConfidenceFrames = 0;
+                                      });
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      textStyle: const TextStyle(fontSize: 12),
+                                    ),
+                                    child: const Text('Clear Sentence'),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
